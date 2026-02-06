@@ -1,12 +1,17 @@
 package main
 
 import (
+	"embed"
 	"log"
 	"net/http"
 )
 
-func main() {
+//go:embed www
+var content embed.FS
 
+func main() {
 	log.Println("listening on :80")
-	log.Fatal(http.ListenAndServe(":80", router()))
+	
+	// On passe 'content' (nos fichiers) à la fonction router
+	log.Fatal(http.ListenAndServe(":80", router(content)))	
 }

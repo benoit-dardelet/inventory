@@ -1,15 +1,18 @@
 package main
 
-import "net/http"
+import (
+	"embed"
+	"io/fs"
+	"log"
+	"net/http"
+)
 
-// Routeur pour l'ensemble de nos routes
-
-func router() http.Handler {
+// On ajoute 'content' en paramètre
+func router(content embed.FS) http.Handler {
 	mux := http.NewServeMux()
-	// Routes de test
-	mux.HandleFunc("GET /health", HealthHandle)
 
-	// Routes techniques
+	// --- ROUTES API ---
+	mux.HandleFunc("GET /health", HealthHandle)
 	mux.HandleFunc("GET /cpu", CPUHandler)
 	mux.HandleFunc("GET /ps", PSHandler)
 	mux.HandleFunc("GET /ps/{user}", PSUserHandler)
@@ -19,9 +22,18 @@ func router() http.Handler {
 	mux.HandleFunc("GET /disk", DiskHandler)
 	mux.HandleFunc("GET /load", LoadHandler)
 	mux.HandleFunc("GET /ps/kill/{pid}", KillProcessHandler)
-	// Autres cas : fichiers statiques
-	fs := http.FileServer(http.Dir("www"))
-	mux.Handle("/", fs)
+
+	// --- FICHIERS STATIQUES (SITE WEB) ---
+	
+	// 1. On récupère le sous-dossier "www" dans l'embed
+	wwwFS, err := fs.Sub(content, "www")
+	if err != nil {
+		log.Fatal("Erreur critique : dossier 'www' introuvable !", err)
+	}
+
+	// 2. On sert ce dossier à la racine "/"
+	// Si on demande /procs.html, Go cherchera dans content/www/procs.html
+	mux.Handle("/", http.FileServer(http.FS(wwwFS)))
 
 	return mux
 }
