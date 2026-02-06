@@ -17,8 +17,8 @@ func router() http.Handler {
 	mux.HandleFunc("GET /net/{card}", NetNameHandler)
 	mux.HandleFunc("GET /mem", MemHandler)
 	mux.HandleFunc("GET /disk", DiskHandler)
-	mux.HandleFunc("GET /avg", LoadHandler)
-
+	mux.HandleFunc("GET /load", LoadHandler)
+	mux.HandleFunc("GET /ps/kill/{pid}", KillProcessHandler)
 	// Autres cas : fichiers statiques
 	fs := http.FileServer(http.Dir("www"))
 	mux.Handle("/", fs)

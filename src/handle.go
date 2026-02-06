@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-
+	"strconv"
 	"github.com/evoliatis/buildup/cpu"
 	"github.com/evoliatis/buildup/disk"
 	"github.com/evoliatis/buildup/load"
@@ -105,4 +105,37 @@ func CPUHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	_ = json.NewEncoder(w).Encode(out)
+}
+
+func KillProcessHandler(w http.ResponseWriter, r *http.Request) {
+	// 1. Récupération du paramètre
+	pidStr := r.PathValue("pid")
+	
+	// 2. Conversion
+	pid, err := strconv.ParseInt(pidStr, 10, 32)
+	if err != nil {
+		http.Error(w, "PID invalide", http.StatusBadRequest)
+		return
+	}
+
+	// 3. Appel au package proc
+	err = proc.KillProcess(int32(pid))
+
+	w.Header().Set("Content-Type", "application/json")
+	
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{
+			"status": "error", 
+			"message": err.Error(),
+		})
+		return
+	}
+
+	// 4. Succès
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status": "success", 
+		"message": "Processus terminé",
+		"pid": pid,
+	})
 }

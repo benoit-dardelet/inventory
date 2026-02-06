@@ -92,8 +92,8 @@
     }
 
     // Bases / endpoints (avec fallback)
-    const LOAD_BASE = pickBase("{{.LoadServerURL}}", "http://linux:8888");
-    const CPU_BASE  = pickBase("{{.CpuServerURL}}",  "http://linux:8888");
+    const LOAD_BASE = pickBase("{{.LoadServerURL}}", "");
+    const CPU_BASE  = pickBase("{{.CpuServerURL}}",  "");
 
     // --- LOAD AVERAGE ---
     const LOAD_SCALE_MAX = 4.0;

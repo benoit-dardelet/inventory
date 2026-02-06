@@ -13,23 +13,34 @@ type Proc struct {
 
 // Chargement des Processus
 func ReadProc(user string) (*[]Proc, error) {
-	var myProcs []Proc
-	procs, err := process.Processes()
+    var myProcs []Proc
+    procs, err := process.Processes()
+    if err != nil {
+        return nil, err
+    }
+    for _, proc := range procs {
+        var myProc Proc
+        myProc.User, _ = proc.Username()
+        if user == "" || user == myProc.User {
+            myProc.Pid = proc.Pid
+            myProc.Name, _ = proc.Name()
+            myProc.CPU, _ = proc.CPUPercent()
+            myProc.Memory, _ = proc.MemoryPercent()
+            status, _ := proc.Status()
+            myProc.Status = status[0]
+            myProcs = append(myProcs, myProc)
+        }
+    }
+    return &myProcs, nil
+}
+
+func KillProcess(pid int32) error {
+	// On crée une instance du processus via gopsutil
+	p, err := process.NewProcess(pid)
 	if err != nil {
-		return nil, err
+		return err // Le processus n'existe peut-être pas
 	}
-	for _, proc := range procs {
-		var myProc Proc
-		myProc.User, _ = proc.Username()
-		if user == "" && user == myProc.User {
-			myProc.Pid = proc.Pid
-			myProc.Name, _ = proc.Name()
-			myProc.CPU, _ = proc.CPUPercent()
-			myProc.Memory, _ = proc.MemoryPercent()
-			status, _ := proc.Status()
-			myProc.Status = status[0]
-			myProcs = append(myProcs, myProc)
-		}
-	}
-	return &myProcs, nil
+
+	// On envoie le signal KILL
+	return p.Kill()
 }
