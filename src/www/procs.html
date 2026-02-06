@@ -24,6 +24,10 @@
     .btn[disabled]{ opacity:.6; cursor:default; }
     code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
     .hint { font-size:.85rem; opacity:.75; }
+    /* Dans <style> ... */
+    .btn-kill { background-color: #e74c3c; /* Rouge */color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; transition: background 0.2s;}  
+    .btn-kill:hover { background-color: #c0392b; /* Rouge plus foncé */}
+    td.center { text-align: center; }
   </style>
 </head>
 <body>
@@ -70,6 +74,7 @@
           <th data-sort="status">Statut</th>
           <th data-sort="cpu" class="right">CPU %</th>
           <th data-sort="memory" class="right">Mémoire %</th>
+          <th class="noclick">Action</th>
         </tr>
       </thead>
       <tbody id="tbody">
@@ -77,7 +82,22 @@
       </tbody>
     </table>
   </section>
-
+  <div id="cowboy-overlay" style="
+    display: none; 
+    position: fixed; 
+    top: 0; left: 0; 
+    width: 100%; height: 100%; 
+    background: rgba(0,0,0,0.5); 
+    z-index: 9999; 
+    justify-content: center; 
+    align-items: center;
+    pointer-events: none;
+  ">
+    <img src="/img/Far-West.webp" 
+         style="max-width: 80%; max-height: 80%; border-radius: 15px; box-shadow: 0 0 50px rgba(0,0,0,0.8);"
+         alt="Bang!">
+  </div>
+  
   <script>
     const PS_URL = '/ps';
     const REFRESH_INTERVAL = 5000; // 5s
@@ -135,8 +155,9 @@
       const tbody = document.getElementById('tbody');
       const count = document.getElementById('count');
 
+      // Note : colspan="7" car on a ajouté une colonne
       if (!Array.isArray(items) || items.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="muted">Aucune donnée</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="muted">Aucune donnée</td></tr>';
         count.textContent = '0 éléments';
         return;
       }
@@ -150,6 +171,10 @@
         const status = p.status ?? '';
         const cpu = num(p.cpu);
         const mem = num(p.memory);
+
+        // Petite sécurité pour les noms contenant des apostrophes
+        const safeName = String(name).replace(/'/g, "\\'");
+
         return (
           '<tr>'
           + '<td class="right mono">' + esc(pid) + '</td>'
@@ -158,6 +183,9 @@
           + '<td><span class="pill">' + esc(status) + '</span></td>'
           + '<td class="right mono">' + cpu.toFixed(3) + '</td>'
           + '<td class="right mono">' + mem.toFixed(3) + '</td>'
+          + '<td class="center">'
+          + '  <button class="btn-kill" onclick="killProc(' + pid + ', \'' + safeName + '\')">☠️ Tuer</button>'
+          + '</td>'          
           + '</tr>'
         );
       }).join('');
@@ -230,6 +258,45 @@
     // initial + 5s refresh
     loadPs();
     setInterval(loadPs, REFRESH_INTERVAL);
+    async function killProc(pid, name) {
+        // 1. Confirmation
+        if (!confirm("⚠️ WANTED : " + name + " (PID " + pid + ")\n\nLa prime est fixée. Voulez-vous exécuter la sentence ?")) {
+            return;
+        }
+
+        try {
+            // 2. Tir (Appel API)
+            const res = await fetch('/ps/kill/' + pid);
+            const data = await res.json();
+
+            if (data.status === 'success') {
+                // --- EFFET FAR WEST ---
+                // On récupère l'overlay par son ID
+                const overlay = document.getElementById('cowboy-overlay');
+                
+                if (overlay) {
+                    console.log("Bang ! Affichage du cowboy...");
+                    overlay.style.display = 'flex'; // On affiche
+
+                    // On cache après 2 secondes
+                    setTimeout(() => {
+                        overlay.style.display = 'none'; 
+                        loadPs(); // On rafraîchit la liste
+                    }, 2000); 
+                } else {
+                    console.error("Erreur : L'élément 'cowboy-overlay' est introuvable dans le HTML !");
+                    // Fallback si l'image marche pas : on rafraichit quand même
+                    loadPs();
+                }
+                // ----------------------
+
+            } else {
+                alert("Enrayé ! Erreur : " + data.message);
+            }
+        } catch (e) {
+            alert("Le shérif ne répond pas : " + e.message);
+        }
+    }
   </script>
 
 </body>
